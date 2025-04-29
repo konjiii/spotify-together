@@ -3,7 +3,7 @@ import os
 import discord
 from dotenv import load_dotenv
 
-from database import init_db
+from database import execute_insert, init_db
 from user import User
 
 load_dotenv()
@@ -31,7 +31,7 @@ async def login(
 
     # login in browser
     url = user.get_authorize_url()
-    await ctx.send(f"go to: {url}, then run /callback callback_url")
+    await ctx.respond(f"go to: {url}, then run /callback callback_url")
 
 
 @bot.slash_command(name="callback", description="finish authentication")
@@ -40,8 +40,7 @@ async def callback(ctx: discord.ApplicationContext, callback_url: str) -> None:
 
     if user is None:
         await ctx.respond("you have not ran /login yet!")
-
-    await ctx.send("lol")
+        return
 
     # save access token in cache
     user.save_access_token(callback_url)
@@ -54,9 +53,11 @@ async def callback(ctx: discord.ApplicationContext, callback_url: str) -> None:
         (?, ?, ?, ?)
     """
 
-    user = ctx.author.name
+    username = ctx.author.name
 
-    execute_insert(insert_query, (user, client_id, client_secret, ""))
+    execute_insert(insert_query, (username, user.client_id, user.client_secret, ""))
+
+    await ctx.respond("login successful")
 
 
 bot.run(os.getenv("DISCORD_TOKEN"))

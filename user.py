@@ -4,6 +4,8 @@ from spotipy.oauth2 import SpotifyOAuth
 
 class User:
     def __init__(self, client_id: str, client_secret: str) -> None:
+        self.client_id = client_id
+        self.client_secret = client_secret
         self.cache_handler = CacheFileHandler(username=client_id)
         self.auth_manager = SpotifyOAuth(
             client_id=client_id,
