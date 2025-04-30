@@ -7,7 +7,6 @@ from spotipy.cache_handler import CacheFileHandler
 from spotipy.oauth2 import SpotifyOAuth
 from threading import Event
 
-
 load_dotenv()
 
 redirect_uri = "http://127.0.0.1:9090/callback"
@@ -54,16 +53,12 @@ def play_song(query: str) -> None:
     results = sp.search(query)
     if results is None:
         return
-
     tracks = results["tracks"]["items"]
-
     for track in tracks:
         print("################")
         print(track["name"])
         print(track["uri"])
-
     first = tracks[0]["uri"]
-    
     sp.start_playback(uris=[first])
 
 # query = input("query: ")
@@ -89,20 +84,7 @@ def play_playlist(playlist_uri,current_device=current_device):
 
 # play_playlist(get_playlist())
 
-def play_song_from_playlist(playlist_uri:str,idx:int,current_device:int=current_device) -> None:
-    """
-    Play a song with the corresponding index in a playlist
-    """
-    try:
-        play_list = sp.playlist_tracks(playlist_id=playlist_uri) 
-    except:
-        raise TypeError("no good url, no playlist found")
-    tracks = [item["track"]["uri"] for item in play_list["items"]] # get all songs in a playlist (list)
-    if idx >= len(tracks) or idx <0:
-        idx = 0
-    track = [tracks[idx]]
-    sp.start_playback(device_id=current_device ,uris=track)
-    
+
 def get_playlist_length(playlist_uri:str):
     """Return: playlist length"""
     try:
@@ -112,7 +94,7 @@ def get_playlist_length(playlist_uri:str):
     tracks = [item["track"]["uri"] for item in play_list["items"]] # get all songs in a playlist (list)
     return len(tracks)
 
-def get_uri(url: str) -> list:
+def get_uri(url: str) -> str:
     qm = url.find("?")
     if qm == -1:
         qm = None
@@ -120,21 +102,59 @@ def get_uri(url: str) -> list:
 
     return "spotify:playlist:" + url[slash + 1 : qm]
 
-def get_current_duration_and_trackname(display=False) -> float:
-    current = sp.current_playback()
-    if current and current.get("item"):
-        track = current["item"]
-        duration_ms = track["duration_ms"]
-        duration_sec = duration_ms / 1000
-        if display:
-            print(f"Current song: {track['name']}")
-            print(f"Duration: {duration_sec:.3f} seconds")
-        return duration_sec
-    else:
-        print("No track currently playing.")
+def play_song_from_playlist(playlist_uri:str,idx:int,current_device:int=current_device) -> None:
+    """
+    Play a song with the corresponding index in a playlist
+    """
+    try:
+        play_list = sp.playlist_tracks(playlist_id=playlist_uri) 
+    except:
+        raise TypeError("no good url, no playlist found")
+    tracks = [item["track"]["uri"] for item in play_list["items"]] # get all songs in a playlist <list>
+    if idx >= len(tracks) or idx <0:
+        idx = 0
+    track = [tracks[idx]]
+    sp.start_playback(device_id=current_device ,uris=track)
 
-# duration_sec = get_current_duration_and_trackname()
-# print(type(duration_sec))
+def get_playlist_info(playlist_uri:str, display=False):
+    """Print all the tracks and artists of the playlist."""
+    if display:    
+        try:
+            results = sp.playlist_items(playlist_uri)
+        except:
+            raise TypeError("no good url, no playlist found")
+        # Extract track names
+        tracks = results['items']
+        while results['next']:
+            results = sp.next(results)
+            tracks.extend(results['items'])
+        for idx, playback in enumerate(tracks):
+            track = playback['track']
+            print(f"{idx+1}. {track['name']} by {track['artists'][0]['name']}")
+
+def get_current_song_info(idx:int=0, display=False, details=False) -> float:
+    """Get the currently playing song info, return the song duration and where you are in the song
+    -------
+    Return: duration_sec: float, progress_sec: float"""
+    playback = sp.current_playback()
+    if playback and playback['is_playing']:
+        track = playback['item']
+        progress_ms = playback['progress_ms']
+        progress_sec = progress_ms / 1000
+        duration_ms = track['duration_ms']
+        duration_sec = duration_ms / 1000
+        song_name = track['name']
+        artist_name = track['artists'][0]['name']
+        if display:
+            print(f"\nNow playing: {idx+1}. {song_name} by {artist_name}")
+            if details:
+                print(f"Progress: {progress_ms / 1000:.2f} seconds")
+                print(f"Duration: {duration_sec:.3f} seconds")
+        return duration_sec, progress_sec
+    else:
+        raise ValueError("No track currently playing.")
+
+
 
 exit = Event()
 
@@ -147,27 +167,47 @@ class MusicPlayer:
         self.exit = Event()
         self.active = False
         self.t1 = None
+        self.choose_playlist()
 
     def loop(self):
-        """the song-selection loop, loop through the songs in the playlist"""
+        """START looping, when already looping skipsong the song-selection loop, loop through the songs in the playlist"""
 
         while not self.exit.is_set():
             # playlist_uri = "spotify:playlist:4YApAkBZf2sjhA4FXMoiTU"
-            play_song_from_playlist(self.playlist_uri,self.index)
-            duration_sec = get_current_duration_and_trackname()
-            self.exit.wait(duration_sec)
-            self.index += 1
-            if self.index >= get_playlist_length(self.playlist_uri):
+            if self.index >= get_playlist_length(self.playlist_uri) or self.index < 0:
                 self.index = 0
+            play_song_from_playlist(playlist_uri=self.playlist_uri, idx=self.index)
+            self.index += 1
+
+            get_playlist_info(playlist_uri=self.playlist_uri, display=True)
+            # wait one sec, in order to not get the: 
+            # "there is no track currently playing" error
+            self.exit.wait(1)
+            duration_sec,progress_sec = get_current_song_info(idx=self.index-1, display=True)
+            self.show_controls()
+            self.exit.wait(duration_sec-progress_sec) # wait for the rest of the song duration
+            
 
 
     def choose_playlist(self):
-        self.input = input("give playlist url")
-        self.playlist_uri = get_uri(self.input)
+        # self.input = input("give playlist url")
+        # self.playlist_uri = get_uri(self.input)
+        self.playlist_uri = "spotify:playlist:4YApAkBZf2sjhA4FXMoiTU"
+
+    @staticmethod
+    def show_controls():
+        print("""
+------------------THE MUSIC PLAYER------------------
+Choose option:
+1: start/skip
+2: stop
+q: quit
+----------------------------------------------------""")
 
 
-    def start(self):
+    def start_or_skip(self):
         """starts the song-selection loop"""
+        self.stop() # stop the looping of the playlist first, so
         self.exit.clear()
         self.t1 = threading.Thread(target=self.loop)
         self.t1.start()
@@ -184,12 +224,25 @@ class MusicPlayer:
 
 if __name__ == "__main__":
     app_on=True
-    music_start = True
+
     musicplayer = MusicPlayer()
-    musicplayer.choose_playlist()
-    musicplayer.start()
-    exit.wait(20)
-    musicplayer.stop()
+    musicplayer.show_controls()
+    while app_on:
+        chosen_option=input()
+        if chosen_option == "1":
+            musicplayer.start_or_skip()
+            print("~~~~~~~~~~~~~~PLAYLIST STARTED PLAYING~~~~~~~~~~~~~~")
+        elif chosen_option == "2":
+            musicplayer.stop()
+            print("~~~~~~~~~~~~~PLAYLIST NO LONGER LOOPING~~~~~~~~~~~~~")
+            musicplayer.show_controls()
+        elif chosen_option == "q":
+            musicplayer.stop()
+            print("quitting program..")
+            app_on = False
+        else:
+            print(f"The input: {chosen_option}, is not a valid command, try again!")
+
     print("done")
 
 
