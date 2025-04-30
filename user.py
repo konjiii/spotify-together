@@ -49,7 +49,7 @@ class User:
         return f"User(client_id: {self.client_id}, client_secret: {self.client_secret})"
 
 
-def get_users() -> dict[str, User]:
+def get_users_dict() -> dict[str, User]:
     """
     gets the users from the database and creates a dictionary
 
@@ -67,6 +67,9 @@ def get_users() -> dict[str, User]:
         raise ValueError("failed to get users")
 
     for entry in data:
+        if entry[1] is None or entry[2] is None:
+            continue
+
         users[entry[0]] = User(entry[1], entry[2], entry[0])
 
     return users

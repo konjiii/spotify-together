@@ -3,8 +3,8 @@ import os
 import discord
 from dotenv import load_dotenv
 
-from database import init_db, insert_db_user
-from user import User, get_users
+from database import get_db_users, init_db, insert_db_user, update_db_user
+from user import User, get_users_dict
 
 load_dotenv()
 bot = discord.Bot()
@@ -12,7 +12,7 @@ bot = discord.Bot()
 init_db()
 
 # dict with all User() instances
-users = get_users()
+users = get_users_dict()
 
 
 @bot.event
@@ -29,6 +29,10 @@ async def login(
     username = ctx.author.name
     user = User(client_id, client_secret, username)
     users[username] = user
+
+    # create new database entry if user is not in database yet
+    if get_db_users(username) is not None:
+        insert_db_user(username)
 
     # login in browser
     url = user.get_authorize_url()
@@ -50,7 +54,16 @@ async def callback(ctx: discord.ApplicationContext, callback_url: str) -> None:
 
     curr_device = user.get_current_device()
 
-    insert_db_user(username, user.client_id, user.client_secret, curr_device)
+    # if curr_device is None:
+    #     await ctx.send(
+    #         "did not find active device\nplease run /select_device to choose a device"
+    #     )
+
+    try:
+        update_db_user(username, user.client_id, user.client_secret, curr_device)
+    except Exception as _:
+        await ctx.respond("login failed")
+        return
 
     await ctx.respond("login successful")
 
