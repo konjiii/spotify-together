@@ -31,6 +31,7 @@ def get_current_device(currently_listening_to_a_track: bool =True) -> str:
     devices = sp.devices()
     for elem in devices["devices"]:
         if elem["is_active"]:
+            print(elem)
             current_device = elem["id"]
             return current_device
     print("No music is playing, there is no device...", file=sys.stderr)
@@ -44,10 +45,9 @@ CURRENT_DEVICE = {current_device}""")
         
 # add_to_env(get_current_device())
 
-
-
 # get device from .env
 current_device = os.getenv("CURRENT_DEVICE")
+print(current_device)
 
 def play_song(query: str) -> None:
     results = sp.search(query)
@@ -59,7 +59,7 @@ def play_song(query: str) -> None:
         print(track["name"])
         print(track["uri"])
     first = tracks[0]["uri"]
-    sp.start_playback(uris=[first])
+    sp.start_playback(device_id=current_device,uris=[first])
 
 # query = input("query: ")
 
@@ -102,7 +102,14 @@ def get_uri(url: str) -> str:
 
     return "spotify:playlist:" + url[slash + 1 : qm]
 
-def play_song_from_playlist(playlist_uri:str,idx:int,current_device:int=current_device) -> None:
+def is_playing():
+    playback = sp.current_playback()
+    if playback and playback['is_playing']:
+        return True
+    else:
+        return False
+
+def play_song_from_playlist(playlist_uri:str,idx:int,current_device:int=current_device, progress_sec:int = 0) -> None:
     """
     Play a song with the corresponding index in a playlist
     """
@@ -115,7 +122,7 @@ def play_song_from_playlist(playlist_uri:str,idx:int,current_device:int=current_
         idx = 0
     track = [tracks[idx]]
     try:
-        sp.start_playback(device_id=current_device ,uris=track)
+        sp.start_playback(device_id=current_device ,uris=track, position_ms=progress_sec*1000)
     except:
         print("No device, YOUR SPOTIFY IS CLOSED! OPEN IT NOWWW!!!", file=sys.stderr)
     
@@ -155,7 +162,7 @@ def get_current_song_info(idx:int=0, display=False, details=False) -> float:
                 print(f"Duration: {duration_sec:.3f} seconds")
         return duration_sec, progress_sec
     else:
-        raise ValueError("No track currently playing.")
+        print("No song currently playing",file = sys.stderr)
 
 
 
@@ -166,7 +173,9 @@ from threading import Event
 
 class MusicPlayer:
     def __init__(self):
+        self.current_device = current_device
         self.index = 0
+        self.progress_sec = 0
         self.exit = Event()
         self.active = False
         self.t1 = None
@@ -176,74 +185,116 @@ class MusicPlayer:
         """START looping, when already looping skipsong the song-selection loop, loop through the songs in the playlist"""
         while not self.exit.is_set():
             # playlist_uri = "spotify:playlist:4YApAkBZf2sjhA4FXMoiTU"
-            if self.index >= get_playlist_length(self.playlist_uri) or self.index < 0:
+            if self.index >= get_playlist_length(self.playlist_uri):
                 self.index = 0
-            play_song_from_playlist(playlist_uri=self.playlist_uri, idx=self.index)
-            self.index += 1
-
+            elif self.index < 0:
+                self.index = get_playlist_length(self.playlist_uri)+self.index
+            play_song_from_playlist(playlist_uri=self.playlist_uri, idx=self.index, current_device=self.current_device, progress_sec=self.progress_sec)
             get_playlist_info(playlist_uri=self.playlist_uri, display=True)
             # wait one sec, in order to not get the: 
             # "there is no track currently playing" error
             self.exit.wait(1)
-            duration_sec,progress_sec = get_current_song_info(idx=self.index-1, display=True)
+            duration_sec,progress_sec = get_current_song_info(idx=self.index, display=True)
             self.show_controls()
             self.exit.wait(duration_sec-progress_sec) # wait for the rest of the song duration
-            
+            self.progress_sec = 0
+            if self.is_running:
+                self.index += 1
 
+    def previous_or_beginning(self):
+        if is_playing():
+            _,self.progress_sec = get_current_song_info(idx=self.index, display=True)
+            if self.progress_sec > 10: # go to start of current song
+                self.progress_sec = 0
+            else: # go to pervious song
+                self.index -=1
+                self.progress_sec = 0
+            self.start()
+        else:
+            self.index -=1
+            self.progress_sec = 0
+            self.start()
 
-    def choose_playlist(self):
-        # self.input = input("give playlist url")
-        # self.playlist_uri = get_uri(self.input)
-        self.playlist_uri = "spotify:playlist:4YApAkBZf2sjhA4FXMoiTU"
+    def play_or_pause(self): #NOT CONINUEING
+        # check if playing a song
+        if is_playing():
+            _,self.progress_sec = get_current_song_info(idx=self.index, display=True)
+            self.stop()
+        else:
+            # self.progress_sec = self.progress_sec
+            self.start()
+
+    def skip(self):
+        self.index +=1
+        self.progress_sec = 0
+        self.start()
+
+    def start(self):
+        """starts the song-selection loop"""
+        self.stop() # stop the looping of the playlist first, so
+        self.exit.clear()
+        self.t1 = threading.Thread(target=self.loop)
+        self.is_running = True
+        self.t1.start()
+        
+    def stop(self):
+        """stops the song-selection loop"""
+        if is_playing():
+            sp.pause_playback(device_id=self.current_device)
+        self.exit.set()
+        self.is_running = False
+        self.active = False
+        if not self.t1 is None:
+            self.t1.join()
+
 
     @staticmethod
     def show_controls():
         print("""
 ------------------THE MUSIC PLAYER------------------
 Choose option:
-1: start/skip
-2: stop
+1: previous
+2: play/pause
+3: skip
+4: stop
 q: quit
 ----------------------------------------------------""")
 
-
-    def start_or_skip(self):
-        """starts the song-selection loop"""
-        self.stop() # stop the looping of the playlist first, so
-        self.exit.clear()
-        self.t1 = threading.Thread(target=self.loop)
-        self.t1.start()
-        
-
-    def stop(self):
-        """stops the song-selection loop"""
-        self.exit.set()
-        self.active = False
-        if not self.t1 is None:
-            self.t1.join()
+    def choose_playlist(self):
+        # self.input = input("give playlist url")
+        # self.playlist_uri = get_uri(self.input)
+        self.playlist_uri = "spotify:playlist:4YApAkBZf2sjhA4FXMoiTU"
 
 
 
 if __name__ == "__main__":
-    app_on=True
-
     musicplayer = MusicPlayer()
     musicplayer.show_controls()
+    app_on=True
     while app_on:
         chosen_option=input()
-        if chosen_option == "1":
-            musicplayer.start_or_skip()
-            print("~~~~~~~~~~~~~~PLAYLIST STARTED PLAYING~~~~~~~~~~~~~~")
-        elif chosen_option == "2":
-            musicplayer.stop()
-            print("~~~~~~~~~~~~~PLAYLIST NO LONGER LOOPING~~~~~~~~~~~~~")
-            musicplayer.show_controls()
-        elif chosen_option == "q":
-            musicplayer.stop()
-            print("quitting program..")
-            app_on = False
-        else:
-            print(f"The input: {chosen_option}, is not a valid command, try again!")
+        match chosen_option:
+            case "1":
+                musicplayer.previous_or_beginning()
+                print("~~~~~~~~~~~~~~PLAYLIST STARTED PLAYING~~~~~~~~~~~~~~")
+            case "2":
+                if is_playing():
+                    print("~~~~~~~~~~~~~~~~~~~PLAYLIST PAUSED~~~~~~~~~~~~~~~~~~")
+                else:
+                    print("~~~~~~~~~~~~~~PLAYLIST STARTED PLAYING~~~~~~~~~~~~~~")
+                musicplayer.play_or_pause()
+            case "3":
+                musicplayer.skip()
+                print("~~~~~~~~~~~~~~PLAYLIST STARTED PLAYING~~~~~~~~~~~~~~")
+            case "4":
+                musicplayer.stop()
+                print("~~~~~~~~~~~~~PLAYLIST NO LONGER LOOPING~~~~~~~~~~~~~")
+            case "q":
+                musicplayer.stop()
+                print("quitting program..")
+                app_on = False
+            case _:
+                print(f"The input: {chosen_option}, is not a valid command, try again!")
 
     print("done")
 
