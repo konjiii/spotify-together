@@ -11,7 +11,7 @@ bot = discord.Bot()
 
 init_db()
 
-# list with all User() instances
+# dict with all User() instances
 users = get_users()
 
 
@@ -46,11 +46,11 @@ async def callback(ctx: discord.ApplicationContext, callback_url: str) -> None:
     # save access token in cache
     user.save_access_token(callback_url)
 
-    # add user to database
-
     username = ctx.author.name
 
-    insert_db_user(username, user.client_id, user.client_secret, "")
+    curr_device = user.get_current_device()
+
+    insert_db_user(username, user.client_id, user.client_secret, curr_device)
 
     await ctx.respond("login successful")
 
