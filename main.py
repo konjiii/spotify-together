@@ -1,5 +1,5 @@
 # SPOTIFY_CLIENT_ID and SPOTIFY_CLIENT_SECRET needed and everyone needs the same redirect_uri = "http://127.0.0.1:9090/callback"
-
+import sys
 import os
 import spotipy
 from dotenv import load_dotenv
@@ -33,7 +33,7 @@ def get_current_device(currently_listening_to_a_track: bool =True) -> str:
         if elem["is_active"]:
             current_device = elem["id"]
             return current_device
-    print("No music is playing, there is no device...")
+    print("No music is playing, there is no device...", file=sys.stderr)
 
 
 def add_to_env(current_device:str) -> None: 
@@ -114,8 +114,11 @@ def play_song_from_playlist(playlist_uri:str,idx:int,current_device:int=current_
     if idx >= len(tracks) or idx <0:
         idx = 0
     track = [tracks[idx]]
-    sp.start_playback(device_id=current_device ,uris=track)
-
+    try:
+        sp.start_playback(device_id=current_device ,uris=track)
+    except:
+        print("No device, YOUR SPOTIFY IS CLOSED! OPEN IT NOWWW!!!", file=sys.stderr)
+    
 def get_playlist_info(playlist_uri:str, display=False):
     """Print all the tracks and artists of the playlist."""
     if display:    
@@ -171,7 +174,6 @@ class MusicPlayer:
 
     def loop(self):
         """START looping, when already looping skipsong the song-selection loop, loop through the songs in the playlist"""
-
         while not self.exit.is_set():
             # playlist_uri = "spotify:playlist:4YApAkBZf2sjhA4FXMoiTU"
             if self.index >= get_playlist_length(self.playlist_uri) or self.index < 0:
