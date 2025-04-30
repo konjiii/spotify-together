@@ -1,4 +1,5 @@
 import os
+import sys
 
 import discord
 from dotenv import load_dotenv
@@ -31,7 +32,7 @@ async def login(
     users[username] = user
 
     # create new database entry if user is not in database yet
-    if get_db_users(username) is not None:
+    if get_db_users(username) == []:
         insert_db_user(username)
 
     # login in browser
@@ -54,18 +55,19 @@ async def callback(ctx: discord.ApplicationContext, callback_url: str) -> None:
 
     curr_device = user.get_current_device()
 
-    # if curr_device is None:
-    #     await ctx.send(
-    #         "did not find active device\nplease run /select_device to choose a device"
-    #     )
-
     try:
         update_db_user(username, user.client_id, user.client_secret, curr_device)
-    except Exception as _:
+    except Exception as e:
+        print(e, file=sys.stderr)
         await ctx.respond("login failed")
         return
 
     await ctx.respond("login successful")
+
+    if curr_device is None:
+        await ctx.send(
+            "did not find active device\nplease run /select_device to choose a device"
+        )
 
 
 bot.run(os.getenv("DISCORD_TOKEN"))

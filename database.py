@@ -53,23 +53,30 @@ def update_db_user(
     curr_device: str | None = None,
 ) -> None:
     # username | client_id | client_secret | curr_device
-    user_data = get_db_users(username)
+    try:
+        user_data = get_db_users(username)
+    except Exception as e:
+        print(f"error when search user in database: {e}")
+        return
 
-    if user_data is None:
+    if user_data == []:
         raise ValueError("failed to update user data in db")
 
+    user_data = user_data[0]
+
     new_data = (
-        username,
         client_id or user_data[1],
-        client_id or user_data[2],
+        client_secret or user_data[2],
         curr_device or user_data[3],
+        username,
     )
 
     query = """
-        INSERT INTO users
-        (id, client_id, client_secret, current_device)
-        VALUES
-        (?, ?, ?, ?)
+        UPDATE users
+        SET
+        client_id = ?, client_secret = ?, current_device = ?
+        WHERE
+        id = ?
     """
     try:
         with sqlite3.connect(db_file) as con:
@@ -82,7 +89,7 @@ def update_db_user(
         raise ValueError("db insertion failed")
 
 
-def get_db_users(username: str | None = None) -> list[tuple[str, str, str, str]] | None:
+def get_db_users(username: str | None = None) -> list[tuple[str, str, str, str]]:
     """
     get user data from the database and return it as a list of users
     when username is given, returns data of single user else returns all users
@@ -105,5 +112,5 @@ def get_db_users(username: str | None = None) -> list[tuple[str, str, str, str]]
 
             return res.fetchall()
     except Exception as e:
-        print("db selection failed", file=sys.stderr)
         print(e, file=sys.stderr)
+        raise ValueError("db selection failed")
