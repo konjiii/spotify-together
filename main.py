@@ -3,8 +3,8 @@ import os
 import discord
 from dotenv import load_dotenv
 
-from database import execute_insert, init_db
-from user import User
+from database import init_db, insert_db_user
+from user import User, get_users
 
 load_dotenv()
 bot = discord.Bot()
@@ -12,7 +12,7 @@ bot = discord.Bot()
 init_db()
 
 # list with all User() instances
-users = dict()
+users = get_users()
 
 
 @bot.event
@@ -26,8 +26,9 @@ async def on_ready():
 async def login(
     ctx: discord.ApplicationContext, client_id: str, client_secret: str
 ) -> None:
-    user = User(client_id, client_secret)
-    users[ctx.author.name] = user
+    username = ctx.author.name
+    user = User(client_id, client_secret, username)
+    users[username] = user
 
     # login in browser
     url = user.get_authorize_url()
@@ -46,16 +47,10 @@ async def callback(ctx: discord.ApplicationContext, callback_url: str) -> None:
     user.save_access_token(callback_url)
 
     # add user to database
-    insert_query = """
-        INSERT INTO users
-        (id, client_id, client_secret, current_device)
-        VALUES
-        (?, ?, ?, ?)
-    """
 
     username = ctx.author.name
 
-    execute_insert(insert_query, (username, user.client_id, user.client_secret, ""))
+    insert_db_user(username, user.client_id, user.client_secret, "")
 
     await ctx.respond("login successful")
 

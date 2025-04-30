@@ -1,12 +1,14 @@
 from spotipy.cache_handler import CacheFileHandler
 from spotipy.oauth2 import SpotifyOAuth
 
+from database import get_db_users
+
 
 class User:
-    def __init__(self, client_id: str, client_secret: str) -> None:
+    def __init__(self, client_id: str, client_secret: str, username: str) -> None:
         self.client_id = client_id
         self.client_secret = client_secret
-        self.cache_handler = CacheFileHandler(username=client_id)
+        self.cache_handler = CacheFileHandler(username=username)
         self.auth_manager = SpotifyOAuth(
             client_id=client_id,
             client_secret=client_secret,
@@ -23,3 +25,29 @@ class User:
         code = self.auth_manager.parse_response_code(callback_url)
         token = self.auth_manager.get_access_token(code)
         self.cache_handler.save_token_to_cache(token)
+
+    def __repr__(self):
+        return f"User(client_id: {self.client_id}, client_secret: {self.client_secret})"
+
+
+def get_users() -> dict[str, User]:
+    """
+    gets the users from the database and creates a dictionary
+
+    params:
+        None
+    returns:
+        dictionary: key = username, value = User() instance
+    """
+    users = dict()
+
+    # username | client_id | client_secret | device
+    data = get_db_users()
+
+    if data is None:
+        raise ValueError("failed to get users")
+
+    for entry in data:
+        users[entry[0]] = User(entry[1], entry[2], entry[0])
+
+    return users
