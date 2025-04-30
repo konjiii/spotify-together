@@ -5,6 +5,9 @@ db_file = "secret_sharing_is_caring.db"
 
 
 def init_db() -> None:
+    """
+    create the database file and table if it does not exist yet
+    """
     try:
         with sqlite3.connect(db_file) as con:
             cur = con.cursor()
@@ -29,6 +32,17 @@ def insert_db_user(
     client_secret: str | None = None,
     curr_device: str | None = None,
 ) -> None:
+    """
+    insert user with optional values in the database
+
+    params:
+        username: str,
+        client_id: Opt<str>,
+        client_secret: Opt<str>,
+        curr_device: Opt<str>,
+    returns:
+        None
+    """
     query = """
         INSERT INTO users
         (id, client_id, client_secret, current_device)
@@ -52,6 +66,17 @@ def update_db_user(
     client_secret: str | None = None,
     curr_device: str | None = None,
 ) -> None:
+    """
+    update values for a user in the database
+
+    params:
+        username: str,
+        client_id: Opt<str>,
+        client_secret: Opt<str>,
+        curr_device: Opt<str>,
+    returns:
+        None
+    """
     # username | client_id | client_secret | curr_device
     try:
         user_data = get_db_users(username)
@@ -99,7 +124,6 @@ def get_db_users(username: str | None = None) -> list[tuple[str, str, str, str]]
     returns:
         list[tuple[username, client_id, client_secret, curr_dev]]
     """
-
     if username is None:
         query = "SELECT * FROM users"
     else:

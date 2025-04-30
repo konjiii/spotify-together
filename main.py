@@ -27,6 +27,15 @@ async def on_ready():
 async def login(
     ctx: discord.ApplicationContext, client_id: str, client_secret: str
 ) -> None:
+    """
+    return a login link the user can use to login
+
+    params:
+        client_id: str,
+        client_secret: str,
+    returns:
+        None
+    """
     username = ctx.author.name
     user = User(client_id, client_secret, username)
     users[username] = user
@@ -42,6 +51,14 @@ async def login(
 
 @bot.slash_command(name="callback", description="finish authentication")
 async def callback(ctx: discord.ApplicationContext, callback_url: str) -> None:
+    """
+    get and save access token using the callback url the user gives
+
+    params:
+        callback_url: str
+    returns:
+        None
+    """
     user = users.get(ctx.author.name)
 
     if user is None:

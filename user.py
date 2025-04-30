@@ -24,14 +24,39 @@ class User:
         self.sp = spotipy.Spotify(auth_manager=self.auth_manager)
 
     def get_authorize_url(self) -> str:
+        """
+        get and return the authorization url used to login
+
+        params:
+            None
+        returns:
+            authorization_url: str
+        """
         return self.auth_manager.get_authorize_url()
 
-    def save_access_token(self, callback_url) -> None:
+    def save_access_token(self, callback_url: str) -> None:
+        """
+        save access token to .cache file given the callback_url
+
+        params:
+            callback_url: str
+        returns:
+            None
+        """
         code = self.auth_manager.parse_response_code(callback_url)
         token = self.auth_manager.get_access_token(code)
         self.cache_handler.save_token_to_cache(token)
 
     def get_current_device(self) -> str | None:
+        """
+        return the device that is currently active
+        returns device id on success and None on failure
+
+        params:
+            None
+        returns:
+            device_id | None
+        """
         currently_listening_to_a_track = self.sp.currently_playing()
 
         if not currently_listening_to_a_track:
