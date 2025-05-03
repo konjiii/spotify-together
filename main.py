@@ -31,7 +31,6 @@ def get_current_device(currently_listening_to_a_track: bool =True) -> str:
     devices = sp.devices()
     for elem in devices["devices"]:
         if elem["is_active"]:
-            print(elem)
             current_device = elem["id"]
             return current_device
     print("No music is playing, there is no device...", file=sys.stderr)
@@ -121,7 +120,15 @@ def play_song_from_playlist(playlist_uri:str,idx:int,current_device:int=current_
     if idx >= len(tracks) or idx <0:
         idx = 0
     track = [tracks[idx]]
-    try:
+    
+    #hier
+    # for user in self.users:
+    #     try:
+    #         user.sp.start_playback(device_id=current_device ,uris=track, position_ms=progress_sec*1000)
+    # except:
+    #     print("No device, YOUR SPOTIFY IS CLOSED! OPEN IT NOWWW!!!", file=sys.stderr)
+
+    try:# hier # remove this\/
         sp.start_playback(device_id=current_device ,uris=track, position_ms=progress_sec*1000)
     except:
         print("No device, YOUR SPOTIFY IS CLOSED! OPEN IT NOWWW!!!", file=sys.stderr)
@@ -142,7 +149,7 @@ def get_playlist_info(playlist_uri:str, display=False):
             track = playback['track']
             print(f"{idx+1}. {track['name']} by {track['artists'][0]['name']}")
 
-def get_current_song_info(idx:int=0, display=False, details=False) -> float:
+def get_current_song_info(idx:int=0, display=False, details=False, pause=False) -> float:
     """Get the currently playing song info, return the song duration and where you are in the song
     -------
     Return: duration_sec: float, progress_sec: float"""
@@ -156,7 +163,10 @@ def get_current_song_info(idx:int=0, display=False, details=False) -> float:
         song_name = track['name']
         artist_name = track['artists'][0]['name']
         if display:
-            print(f"\nNow playing: {idx+1}. {song_name} by {artist_name}")
+            if pause:
+                print(f"\nNow pausing: {idx+1}. {song_name} by {artist_name}")
+            else:
+                print(f"\nNow playing: {idx+1}. {song_name} by {artist_name}")
             if details:
                 print(f"Progress: {progress_ms / 1000:.2f} seconds")
                 print(f"Duration: {duration_sec:.3f} seconds")
@@ -165,21 +175,20 @@ def get_current_song_info(idx:int=0, display=False, details=False) -> float:
         print("No song currently playing",file = sys.stderr)
 
 
-
-exit = Event()
-
 import threading
 from threading import Event
 
 class MusicPlayer:
     def __init__(self):
+    # def __init__(self,users):
+        # self.users = users #list of user objects, used to get the user sp
         self.current_device = current_device
         self.index = 0
         self.progress_sec = 0
         self.exit = Event()
-        self.active = False
         self.t1 = None
         self.choose_playlist()
+
 
     def loop(self):
         """START looping, when already looping skipsong the song-selection loop, loop through the songs in the playlist"""
@@ -197,8 +206,8 @@ class MusicPlayer:
             duration_sec,progress_sec = get_current_song_info(idx=self.index, display=True)
             self.show_controls()
             self.exit.wait(duration_sec-progress_sec) # wait for the rest of the song duration
-            self.progress_sec = 0
             if self.is_running:
+                self.progress_sec = 0
                 self.index += 1
 
     def previous_or_beginning(self):
@@ -214,11 +223,12 @@ class MusicPlayer:
             self.index -=1
             self.progress_sec = 0
             self.start()
+ 
 
     def play_or_pause(self): #NOT CONINUEING
         # check if playing a song
         if is_playing():
-            _,self.progress_sec = get_current_song_info(idx=self.index, display=True)
+            _,self.progress_sec = get_current_song_info(idx=self.index, display=True,pause = True)
             self.stop()
         else:
             # self.progress_sec = self.progress_sec
@@ -231,7 +241,7 @@ class MusicPlayer:
 
     def start(self):
         """starts the song-selection loop"""
-        self.stop() # stop the looping of the playlist first, so
+        self.stop() # stop the looping of the playlist first, sothat only one loop is on in the background instead of multiple
         self.exit.clear()
         self.t1 = threading.Thread(target=self.loop)
         self.is_running = True
@@ -243,7 +253,6 @@ class MusicPlayer:
             sp.pause_playback(device_id=self.current_device)
         self.exit.set()
         self.is_running = False
-        self.active = False
         if not self.t1 is None:
             self.t1.join()
 
@@ -276,6 +285,7 @@ if __name__ == "__main__":
         match chosen_option:
             case "1":
                 musicplayer.previous_or_beginning()
+                # mu
                 print("~~~~~~~~~~~~~~PLAYLIST STARTED PLAYING~~~~~~~~~~~~~~")
             case "2":
                 if is_playing():
