@@ -9,9 +9,10 @@ import threading
 from threading import Event
 
 class MusicPlayer:
-    def __init__(self):
+    def __init__(self, host):
     # def __init__(self,users):
-        # self.users = users #list of user objects, used to get the user sp
+        self.users = dict() #list of user objects, used to get the user sp
+        self.host = host
         self.queue_number_is_playing = False
         self.queue = []
         # self.current_device hier, haal het uit de user per user
