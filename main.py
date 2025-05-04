@@ -174,7 +174,7 @@ async def join_party(ctx: discord.ApplicationContext, name: str) -> None:
         name: str
     """
     username = ctx.author.name
-    parties[name].add_user(username, users[username])
+    parties[name].add_user(users[username])
     user_to_party[username] = name
 
     await ctx.respond(f"user {username} added to party {name}")
