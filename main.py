@@ -4,7 +4,7 @@ import sys
 import discord
 from dotenv import load_dotenv
 
-from database import get_db_users, init_db, insert_db_user, update_db_user
+from database import get_db_users, init_db, insert_db_user
 from user import User, get_users_dict
 from musicplayer import MusicPlayer
 
@@ -41,7 +41,7 @@ async def login(
         client_secret: str,
     """
     username = ctx.author.name
-    user = User(client_id, client_secret, username)
+    user = User(username, client_id, client_secret)
     users[username] = user
 
     # create new database entry if user is not in database yet
@@ -80,7 +80,7 @@ async def callback(ctx: discord.ApplicationContext, callback_url: str) -> None:
     curr_device = user.get_current_device()
 
     try:
-        update_db_user(username, user.client_id, user.client_secret, curr_device)
+        user.update_user(user.client_id, user.client_secret, curr_device)
     except Exception as e:
         print(e, file=sys.stderr)
         await ctx.respond("login failed", ephemeral=True)
@@ -142,7 +142,13 @@ async def select_device(ctx: discord.ApplicationContext) -> None:
     
     # perform device change
     device = available_devices[device_num]["id"]
-    update_db_user(username, curr_device=device)
+    user = users[username]
+    try:
+        user.update_user(username, curr_device=device)
+    except Exception as e:
+        print(e, file=sys.stderr)
+        await ctx.respond("device update failed", ephemeral=True)
+        return
     await ctx.send(f"device changed to {available_devices[device_num]["name"]}", reference=reply_message)
 
 

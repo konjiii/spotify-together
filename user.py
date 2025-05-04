@@ -4,11 +4,12 @@ import spotipy
 from spotipy.cache_handler import CacheFileHandler
 from spotipy.oauth2 import SpotifyOAuth
 
-from database import get_db_users
+from database import get_db_users, update_db_user
 
 
 class User:
-    def __init__(self, username: str, client_id: str, client_secret: str, curr_device: str) -> None:
+    def __init__(self, username: str, client_id: str, client_secret: str, curr_device: str | None = None) -> None:
+        self.username = username
         self.client_id = client_id
         self.client_secret = client_secret
         self.curr_device = curr_device
@@ -74,8 +75,24 @@ class User:
                 return current_device
         print("No music is playing, there is no device...", file=sys.stderr)
 
-    def update_user(self, username: str | None, client_id: str | None, client_secret: str | None, curr_device: str | None) -> None:
-        pass
+    def update_user(self, client_id: str | None = None, client_secret: str | None = None, curr_device: str | None = None) -> None:
+        """
+        update user information
+
+        params:
+            client_id: Opt<str>,
+            client_secret: Opt<str>,
+            curr_device: Opt<str>,
+        returns:
+            None
+        """
+        # update user info in this instance
+        self.client_id = client_id or self.client_id
+        self.client_secret = client_secret or self.client_secret
+        self.curr_device = curr_device or self.curr_device
+
+        # update user info in database
+        update_db_user(self.username, client_id, client_secret, curr_device)
 
     def __repr__(self):
         return f"User(client_id: {self.client_id}, client_secret: {self.client_secret})"
