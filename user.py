@@ -8,10 +8,10 @@ from database import get_db_users
 
 
 class User:
-    def __init__(self, client_id: str, client_secret: str, username: str) -> None:
+    def __init__(self, username: str, client_id: str, client_secret: str, curr_device: str) -> None:
         self.client_id = client_id
         self.client_secret = client_secret
-        self.curr_device = None
+        self.curr_device = curr_device
         self.cache_handler = CacheFileHandler(username=username)
         self.auth_manager = SpotifyOAuth(
             client_id=client_id,
@@ -74,6 +74,9 @@ class User:
                 return current_device
         print("No music is playing, there is no device...", file=sys.stderr)
 
+    def update_user(self, username: str | None, client_id: str | None, client_secret: str | None, curr_device: str | None) -> None:
+        pass
+
     def __repr__(self):
         return f"User(client_id: {self.client_id}, client_secret: {self.client_secret})"
 
@@ -99,6 +102,6 @@ def get_users_dict() -> dict[str, User]:
         if entry[1] is None or entry[2] is None:
             continue
 
-        users[entry[0]] = User(entry[1], entry[2], entry[0])
+        users[entry[0]] = User(entry[0], entry[1], entry[2], entry[3])
 
     return users

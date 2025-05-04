@@ -1,5 +1,6 @@
 - features:
-    - device selector
+
+- development:
+    - user_update function in User class
 
 - bugs:
-    - other message when login failed
