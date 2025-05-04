@@ -44,6 +44,10 @@ class User:
             None
         """
         code = self.auth_manager.parse_response_code(callback_url)
+        
+        if len(code) != 246:
+            raise ValueError("invalid code from callback link")
+
         token = self.auth_manager.get_access_token(code)
         self.cache_handler.save_token_to_cache(token)
 

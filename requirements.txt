@@ -1,3 +1,4 @@
 python-dotenv
 py-cord
 spotipy
+audioop-lts
