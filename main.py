@@ -112,7 +112,7 @@ async def select_device(ctx: discord.ApplicationContext) -> None:
     # create device selection prompt
     device_list = "please select a device from below (send the number in chat):\n"
     for i, device in enumerate(available_devices):
-        device_list += f"{i+1}. {device["name"]} ({device["type"]})\n"
+        device_list += f"{i+1}. {device['name']} ({device['type']})\n"
 
     await ctx.respond(device_list)
 
