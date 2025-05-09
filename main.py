@@ -94,6 +94,7 @@ async def callback(ctx: discord.ApplicationContext, callback_url: str) -> None:
             ephemeral=True
         )
 
+
 @bot.slash_command(name="select_device", description="select a device to use to control with the bot")
 async def select_device(ctx: discord.ApplicationContext) -> None:
     """
@@ -165,19 +166,59 @@ async def create_party(ctx: discord.ApplicationContext, name: str) -> None:
 
     await ctx.respond(f"created party: {name}")
 
+
 @bot.slash_command(name="join_party", description="add user to party")
 async def join_party(ctx: discord.ApplicationContext, name: str) -> None:
     """
     add user that calls this function to a party with name 'name'
-    
+    , makes party when it doesn't exist yet
     params:
         name: str
     """
     username = ctx.author.name
-    parties[name].add_user(users[username])
+    if username in user_to_party: # check if username is a key in the user_to_party_dict
+        await leave_party(ctx) # make the user leave the party
+    
+    try:
+        parties[name].add_user(users[username]) # add user to music player party
+    except: # make party if it doesn't exist yet 
+        await create_party(ctx,name)
+        parties[name].add_user(users[username]) # add user to music player party
+    
     user_to_party[username] = name
-
     await ctx.respond(f"user {username} added to party {name}")
+    
 
+@bot.slash_command(name="leave_party", description="remove user from party")
+async def leave_party(ctx: discord.ApplicationContext) -> None:
+    """
+    remove user that calls this function from the party
+    params:
+        name: str
+    """
+    username = ctx.author.name
+    try:
+        party_name = user_to_party[username]
+        user_to_party.pop(username)
+        parties[party_name].remove_user(username) # add user to music player party
+        await ctx.respond(f"user {username} removed from party {party_name}")
+    except: # make party if it doesn't exist yet 
+        await ctx.respond(f"user {username} is not in any party")
+    
+    
+@bot.slash_command(name="current_party", description="show what party you are in")
+async def current_party(ctx: discord.ApplicationContext) -> None:
+    """
+    let the bot say the users current party, or that the user is not in any party
+    params:
+        name: str
+    """
+    username = ctx.author.name
+    if username in user_to_party:
+        party_name = user_to_party[username]
+        await ctx.respond(f"user {username} is in party {party_name}")
+    else:
+        await ctx.respond(f"user {username} is not in any party")
+    
 
 bot.run(os.getenv("DISCORD_TOKEN"))

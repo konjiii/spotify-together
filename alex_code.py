@@ -292,7 +292,6 @@ if __name__ == "__main__":
         match chosen_option:
             case "1":
                 musicplayer.previous_or_beginning()
-                # mu
                 print("~~~~~~~~~~~~~~PLAYLIST STARTED PLAYING~~~~~~~~~~~~~~")
             case "2":
                 if musicplayer.is_playing():
