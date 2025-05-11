@@ -3,7 +3,7 @@ dict["c"] = "d"
 
 for k in dict.keys():
     print(dict[str(k)])
-
+print(list(dict.keys())[0])
 # print(list(dict)[0]) #get first value
 
 # print(list(dict.keys())[0]) # get first key

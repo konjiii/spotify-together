@@ -57,7 +57,6 @@ class MusicPlayer:
                     try:
                         idx = int(query)
                         if 0 <= idx < len(tracks):
-                            chosen_track = tracks[idx]["uri"]
                             not_valid_answer = False
                             searching = False
                     except:
@@ -70,7 +69,7 @@ class MusicPlayer:
                         else: 
                             print(f"{query} is not a valid answer")
         if dont_cancel_adding:
-            chosen_track = tracks[0]["uri"]
+            chosen_track = tracks[idx]["uri"]
             self.queue.append(chosen_track)
             print(f"{tracks[idx]['name']} from {tracks[idx]['album']['artists'][0]['name']} added to the queue.")
             self.show_controls()
@@ -101,7 +100,7 @@ class MusicPlayer:
         if playback and playback['is_playing']:
             return True
         else:
-            return
+            return False
         
     @staticmethod
     def play_song(track_uri, current_device:int=current_device, progress_sec:int = 0):
