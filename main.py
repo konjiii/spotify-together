@@ -8,6 +8,7 @@ from database import get_db_users, init_db, insert_db_user
 from user import User, get_users_dict
 from musicplayer import MusicPlayer
 
+# for shutdown
 import asyncio
 from contextlib import suppress
 
@@ -29,8 +30,8 @@ parties = dict()
 async def on_ready():
     print(f"{bot.user} is ready and online!")
 
-# NOT GOOD HIERONDER
-@bot.slash_command(name="shutdown", description="press or pause for your party")
+
+@bot.slash_command(name="shutdown", description="To close the bot")
 async def shutdown(ctx):
     app_info = await bot.application_info()
     if ctx.author.id != app_info.owner.id:
@@ -38,32 +39,16 @@ async def shutdown(ctx):
         return
 
     await ctx.respond("Shutting down... 👋")
-    await bot.close()
-    loop = asyncio.get_event_loop()
-    # Let's also cancel all running tasks:
-    pending = asyncio.Task.all_tasks()
-    for task in pending:
+
+    # Cancel the rest
+    tasks = [t for t in asyncio.all_tasks() if t is not asyncio.current_task()]
+    for task in tasks:
         task.cancel()
-        # Now we should await task to execute it's cancellation.
-        # Cancelled task raises asyncio.CancelledError that we can suppress:
         with suppress(asyncio.CancelledError):
-            loop.run_until_complete(task)
-    sys.exit(0) 
-    
-@bot.event
-async def on_close():
+            await task
+    # afterwards close the bot
     await bot.close()
-    sys.exit(0) 
-    loop = asyncio.get_event_loop()
-    # Let's also cancel all running tasks:
-    pending = asyncio.Task.all_tasks()
-    for task in pending:
-        task.cancel()
-        # Now we should await task to execute it's cancellation.
-        # Cancelled task raises asyncio.CancelledError that we can suppress:
-        with suppress(asyncio.CancelledError):
-            loop.run_until_complete(task)
-# NOT GOOD hierboven
+
 
 @bot.slash_command(
     name="login", description="login with your client_id and client_secret"
