@@ -267,7 +267,7 @@ async def choose_playlist(ctx: discord.ApplicationContext, url: str) -> None:
     else: # make party if it doesn't exist yet 
         await ctx.respond(f"user {username} is not in any party")
    
-async def q_and_a(ctx: discord.ApplicationContext ,question: str) -> str:
+async def q_and_a(ctx: discord.ApplicationContext ,question: str, timeout: float | None = None) -> str:
     """
     equivalent of input() function but for the discord bot
     params:
@@ -277,7 +277,7 @@ async def q_and_a(ctx: discord.ApplicationContext ,question: str) -> str:
     await ctx.respond(question, ephemeral=True)
     # await response from user
     try:
-        reply_message = await bot.wait_for('message', check=(lambda message: message.author.name == username), timeout=10.0)
+        reply_message = await bot.wait_for('message', check=(lambda message: message.author.name == username), timeout=timeout)
     except Exception as e:
         print(e, file=sys.stderr)
         await ctx.respond("response took too long", ephemeral=True)
