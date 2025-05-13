@@ -187,7 +187,6 @@ class MusicPlayer:
     def loop(self):
         """START looping, loop through the songs in the playlist"""
         while not self.exit.is_set():
-            playing_queue_song = False
             if self.queue: # if there is a song in the queue 
                 #play queue song
                 self.queue_number_is_playing = True
