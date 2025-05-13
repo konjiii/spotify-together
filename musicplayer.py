@@ -187,9 +187,10 @@ class MusicPlayer:
     def loop(self):
         """START looping, loop through the songs in the playlist"""
         while not self.exit.is_set():
+            playing_queue_song = False
             if self.queue: # if there is a song in the queue 
                 #play queue song
-                self.queue_number_is_playing=True
+                self.queue_number_is_playing = True
                 self.play_song(track_uri=self.queue[0], progress_sec=self.progress_sec)
             else:
                 self.queue_number_is_playing=False
@@ -206,16 +207,16 @@ class MusicPlayer:
                 self.exit.wait(1)
                 duration_sec,progress_sec = self.get_current_song_info(idx=self.index, display=True)
                 self.exit.wait(duration_sec-progress_sec) # wait for the rest of the song duration
-            # if running update the progress in the song for the next song
+            # if is_running, update the progress in the song for the next song
             # and update the index sothat the next song is played in the next loop, 
             # else: not running so do not update it
-            if self.queue:
-                if self.is_running:
+            if self.is_running:
+                if self.queue_number_is_playing:
                     self.progress_sec = 0
                     self.queue.pop(0)
-            elif self.is_running:
-                self.progress_sec = 0
-                self.index += 1
+                else:
+                    self.progress_sec = 0
+                    self.index += 1
 
 
     def previous_or_beginning(self):
@@ -242,10 +243,11 @@ class MusicPlayer:
             self.start()
 
     def skip(self):
-        self.index +=1
         self.progress_sec = 0
         if self.queue_number_is_playing:
             self.queue.pop(0)
+        else:
+            self.index +=1
         self.start()
         
     def start(self):
