@@ -230,6 +230,11 @@ async def leave_party(ctx: discord.ApplicationContext) -> None:
             await ctx.respond(f"user {username} removed from party {party_name}")
         except Exception as e:
             print(e, file=sys.stderr)
+
+        if party_name not in user_to_party.values():
+            # party is empty so remove it
+            del parties[party_name]
+            await ctx.respond(f"party {party_name} is empty so was removed")
     else:
         await ctx.respond(f"user {username} is not in any party")
     
