@@ -393,5 +393,35 @@ async def play_or_pause(ctx: discord.ApplicationContext) -> None:
     else:
         await ctx.respond(f"user {username} is not in any party")
 
+
+@bot.slash_command(name="skip", description="skip song for your party")
+async def skip(ctx: discord.ApplicationContext) -> None:
+    """
+    skip song in the musicplayer of the party, or say that the user is not in any party
+
+    """
+    username = ctx.author.name
+    if username in user_to_party:
+        party_name = user_to_party[username]
+        parties[party_name].skip()
+        await ctx.respond("👍", ephemeral=True)
+    else:
+        await ctx.respond(f"user {username} is not in any party")
+
+
+@bot.slash_command(name="back", description="back song for your party")
+async def back(ctx: discord.ApplicationContext) -> None:
+    """
+    back song in the musicplayer of the party, or say that the user is not in any party
+
+    """
+    username = ctx.author.name
+    if username in user_to_party:
+        party_name = user_to_party[username]
+        parties[party_name].previous_or_beginning()
+        await ctx.respond("👍", ephemeral=True)
+    else:
+        await ctx.respond(f"user {username} is not in any party")
+
 bot.run(os.getenv("DISCORD_TOKEN"))
 
