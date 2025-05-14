@@ -73,7 +73,7 @@ async def login(
 
     # login in browser
     url = user.get_authorize_url()
-    await ctx.respond(f"go to: {url}, then run /callback callback_url", ephemeral=True)
+    await ctx.respond(f"go to: {url}, then wait until the site refreshes and copy the link of the webpage. The new link is the callback url.\nThen run /callback", ephemeral=True)
 
 
 @bot.slash_command(name="callback", description="finish authentication")

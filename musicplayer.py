@@ -116,7 +116,7 @@ class MusicPlayer:
             try:
                 self.users[str(k)].sp.start_playback(device_id=self.users[str(k)].curr_device ,uris=[track_uri], position_ms=progress_sec*1000)
             except Exception as e:
-                print("No device, YOUR SPOTIFY IS CLOSED! OPEN IT NOWWW!!! "+e, file=sys.stderr)
+                print("No device, YOUR SPOTIFY IS CLOSED! OPEN IT NOWWW!!! " + str(e), file=sys.stderr)
 
     def play_song_from_playlist(self,playlist_uri:str,idx:int, progress_sec:int = 0) -> None:
         """
