@@ -1,3 +1,4 @@
+[Read the code base saga here](./STORY.md)
 # Spotify together bot guide
 
 ## How to Use the App (In Order):
