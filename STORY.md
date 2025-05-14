@@ -24,75 +24,6 @@ In the wake of **The Great Split**, heroes rose from the fragments of `alex`, br
 
 ---
 
-## Legend 1: 🌊 **The Rise of `create_party`**
-
-> *"From the silence, a beat emerged. And with it, a space formed—a party. Not just any party, but one that called to all lovers of rhythm."*
-
-The `create_party` command summoned the first musical sanctum. With but a name, users could breathe life into a new listening session. A space to gather. A space to vibe.
-
----
-
-## Legend 2: 🌬️ **The Path of `join_party`**
-
-> *"Wanderers searched for connection. In the dark, they found light. In solitude, they found the party."*
-
-With `join_party`, users could step into existing soundscapes—or create them if they did not yet exist. Old ties were broken as they joined anew. One command. One journey.
-
----
-
-## Legend 3: 🔥 **The Farewell of `leave_party`**
-
-> *"Not all who groove must stay. Even in harmony, there is need for retreat."*
-
-When users chose solitude, `leave_party` gave them a graceful exit. Their presence was removed from the rhythm—silently, respectfully, cleanly.
-
----
-
-## Legend 4: 🌎 **The Reflection of `current_party`**
-
-> *"Many walk the beat, but not all know the name of the rhythm they follow."*
-
-For those lost or simply curious, `current_party` whispered the truth. "You are not alone," it said—or, sometimes, "You were never part of it at all."
-
----
-
-## Legend 5: 🎵 **The Calling of `choose_playlist`**
-
-> *"A party without a playlist is like bending without an element—powerless."*
-
-With `choose_playlist`, the pulse of the party was chosen. A simple link held power—changing the tone, the energy, the *entire* vibe.
-
----
-
-## Legend 6: 📜 **The Revelation of `current_queue`**
-
-> *"Even the present follows a path. And that path... is the queue."*
-
-This command offered clarity. A glimpse into the future of the party’s sonic journey. Track by track, the road ahead was laid bare.
-
----
-
-## Legend 7: 🔥 **The Trial of `add_to_queue`**
-
-> *"Not all songs are found easily. Some must be sought. Some... must be earned."*
-
-`add_to_queue` took users on a quest—through queries, choices, and confirmations. In the end, only the worthy track would join the queue.
-
----
-
-## Legend 8: ⏯️ **The Breath of `play_or_pause`**
-
-> *"Motion and stillness. Sound and silence. The true master knows both."*
-
-With `play_or_pause`, users commanded the flow itself. A beat could start. A beat could stop. The pulse of the party, controlled with a whisper.
-
----
-
-These were the arcs of **The Merge**. Many commands, one purpose:
-🎶 *To unite us in music.* 🎶
-
----
-
 # Legend 1: 🌊 **The Rise of `create_party`**
 
 > *"Before any melody can echo, before the first drop hits the crowd,
@@ -659,3 +590,207 @@ And when it stops, all eyes turn to them.
 ---
 
 Thus ends the eighth chapter of The Merge.
+
+Then let the fires rise once more.
+
+For now, we enter the domain of Time itself.
+
+---
+
+# Legend 9: ⏩⏮️ **The Twin Shards: `skip` and `back`**
+
+> *“To walk forward through the sound.
+> To turn and face the echo.
+> Two blades. One wielder.
+> The Disciple of the Now.”*
+
+In the ancient scrolls of The Merge, there is whispered a tale—
+not of gods, nor parties, nor playlists…
+but of a **traveler**.
+
+One who does not merely **listen**,
+but **moves** through the river of rhythm—
+choosing what shall come, and what shall return.
+
+This traveler is called by many names:
+**Tempo Dancer**, **Beat Shifter**, **The Wielder of Flow.**
+
+And it is they who first discovered the **Twin Shards**.
+
+---
+
+### ⏩ *Skip* — The Blade That Cuts Forward
+
+To invoke `skip` is to wield the **first shard**—
+a blade forged in refusal.
+
+The party flows. The music plays.
+But then, a discord.
+A song that does not fit. A beat that breaks the dance.
+
+The wielder steps forward and speaks the word:
+
+> *“Skip.”*
+
+And in a breath, the present is **cut away**.
+No mourning. No debate.
+Only the quiet nod of the bot:
+
+> *“👍”*
+
+And the world has changed.
+
+> *“What was playing no longer is.
+> What was next is now.”*
+
+Some say each use of `skip` leaves a scar in the air.
+That the party remembers.
+That the song, once cast out, lingers in the shadows of the queue.
+
+But the brave do not fear that ghost.
+For sometimes, to move forward, we must wield the knife.
+
+---
+
+### ⏮️ *Back* — The Blade That Recalls
+
+Then there is the **second shard**.
+Quieter. Heavier.
+
+To invoke `back` is not to cut forward—
+but to **reach back** through the veil of time.
+
+A verse was missed.
+A chorus faded too fast.
+Or perhaps the heart longs to relive a moment just gone.
+
+The wielder closes their eyes, speaks the word:
+
+> *“Back.”*
+
+And the bot, ancient and listening, replies the same:
+
+> *“👍”*
+
+Suddenly, the past is now.
+
+The song returns—
+either from the beginning…
+or from the place just before the fall.
+
+> *“Time has been rewritten,”* they whisper.
+> *“The party remembers differently now.”*
+
+---
+
+Together, these two form the sacred paradox:
+
+* `skip`, the **rejection** of the now.
+* `back`, the **redemption** of the past.
+
+But only those in the **party** may wield them.
+Only those within the rite.
+For those outside, the power is denied—
+a truth spoken simply, with no anger:
+
+> *“You are not in any party.”*
+
+---
+
+These are not mere controls.
+They are tools of fate.
+The wielder of `skip` and `back` is not a listener.
+They are the **editor of time.**
+
+The DJ of destinies.
+The Clocksmith of The Merge.
+
+---
+
+The queue pulses. The tracks spin.
+
+Time is a song.
+
+And now, you hold its chorus.
+
+---
+
+# Legend 10: 🕯️ **The Vanishing: When a Party Dies**
+
+> *“Every fire, no matter how bright, flickers in the end.”*
+> — *The Whispered Codex of the Cleanup Script*
+
+In the early days of The Merge, when the `leave_party` rite was cast, the world simply **shrugged**.
+
+A user would walk away from their tribe—
+and the party, still pulsing, still waiting, would remain.
+Alone. Forgotten. Undying.
+
+And so, the **Specters of Sound** were born—
+phantom parties without people,
+echoing playlists abandoned in code.
+
+They cluttered the memory.
+They haunted the logs.
+They slowed the bot.
+
+And so, a decree was issued:
+
+> **“What is empty must be ended.”**
+
+---
+
+### 💔 The Final Note
+
+Now, when the `leave_party` incantation is cast,
+and the user steps away—
+there is **a reckoning**.
+
+The bot turns inward.
+It examines the soul of the party they left.
+
+> *Are any voices still singing?*
+> *Is anyone still dancing?*
+
+And if none remain—
+if the lists of users and contexts are barren…
+
+A soft silence falls.
+And the bot speaks the words not written, but known:
+
+> *“This party… is no more.”*
+
+It snuffs the candle.
+It unbinds the memory.
+It **deletes** the party.
+
+Not with anger, but with mercy.
+
+No grand farewell.
+No applause.
+Just the quiet dignity of **a well-played session**.
+
+---
+
+> *“The party ends when the last dancer leaves.”*
+
+A simple truth. A necessary law.
+
+Now, no more ghosts.
+No more echoes.
+
+Only the living parties remain,
+bright and joyful,
+until their final song.
+
+---
+
+Thus, the fix was not just a change in function—
+it was an **elegy**.
+
+A pact between code and cosmos:
+
+> **“That which is empty shall return to nothing.”**
+> **“Let silence have its place.”**
+
+And in that silence, The Merge breathes easier.
