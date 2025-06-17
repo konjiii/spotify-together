@@ -69,7 +69,8 @@ async def login(
         user = users.get(username)
         if user is None:
             await ctx.respond(
-                "client_id or client_secret unknown. Please provide client_id and client_secret to /login"
+                "client_id or client_secret unknown. Please provide client_id and client_secret to /login",
+                ephemeral=True,
             )
             return
     else:
