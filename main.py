@@ -80,8 +80,9 @@ class CallbackModal(Modal):
             self.user.save_access_token(callback_url)
         except Exception as e:
             print(e, file=sys.stderr)
+            # send custom linus emoji for fun
             await interaction.response.send_message(
-                "❌ Login failed: invalid callback URL", ephemeral=True
+                "<:linus:1384664711114789006> Login failed: invalid callback URL", ephemeral=True
             )
             return
 
