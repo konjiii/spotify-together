@@ -5,10 +5,10 @@ import sys
 from contextlib import suppress
 
 import discord
-from discord import ui
-from discord.ui import View, Button, Modal, InputText
 from dotenv import load_dotenv
 
+from buttons import DeviceButton
+from callback import CallbackView
 from database import get_db_users, init_db, insert_db_user
 from musicplayer import MusicPlayer
 from user import User, get_users_dict
@@ -50,72 +50,24 @@ async def shutdown(ctx):
     # afterwards close the bot
     await bot.close()
 
-# send modal (a from) to privately send your callbacklink
-class SecretModal(Modal):
-    # The modal itself
-    def __init__(self, user, url):
-        super().__init__(title="Paste Spotify Callback URL")
-        self.user = user
-        self.url = url
-        self.input = InputText(
-            label="Callback URL",
-            placeholder=f"Visit: the url, then paste the full redirected URL here.",
-            style=discord.InputTextStyle.long
-        )
-        self.add_item(self.input)
 
-    # what happens after the modal
-    async def callback(self, interaction: discord.Interaction):
-        callback_url = self.input.value
-
-        if not self.user:
-            await interaction.response.send_message("You have not run /login yet!", ephemeral=True)
-            return
-
-        try:
-            self.user.save_access_token(callback_url)
-        except Exception as e:
-            print(e, file=sys.stderr)
-            await interaction.response.send_message("❌ Login failed: invalid callback URL", ephemeral=True)
-            return
-
-        curr_device = self.user.get_current_device()
-        try:
-            self.user.update_user(self.user.client_id, self.user.client_secret, curr_device)
-        except Exception as e:
-            print(e, file=sys.stderr)
-            await interaction.response.send_message("❌ Failed to update user info.", ephemeral=True)
-            return
-
-        await interaction.response.send_message("✅ Login successful!", ephemeral=True)
-
-        if curr_device is None:
-            await interaction.followup.send(
-                "⚠️ No active device found. Run `/select_device` to pick one.",
-                ephemeral=True
-            )
-
-# send modal after buttonpress
-class CallbackButtonView(View):
-    def __init__(self, user, url):
-        super().__init__(timeout=300)
-        self.user = user
-        self.url = url
-
-    @discord.ui.button(label="Paste Callback URL", style=discord.ButtonStyle.primary)
-    async def open_modal(self, button: Button, interaction: discord.Interaction):
-        await interaction.response.send_modal(SecretModal(self.user, self.url))
-
-
-@bot.slash_command(name="login", description="Login with your client_id and client_secret")
-async def login(ctx: discord.ApplicationContext, client_id: str = None, client_secret: str = None):
+@bot.slash_command(
+    name="login", description="Login with your client_id and client_secret"
+)
+async def login(
+    ctx: discord.ApplicationContext,
+    client_id: str | None = None,
+    client_secret: str | None = None,
+):
     username = ctx.author.name
 
     # Validate user setup
     if client_id is None or client_secret is None:
         user = users.get(username)
-        if user is None:
-            await ctx.respond("Please provide both client_id and client_secret.", ephemeral=True)
+        if user is None or user.client_id is None or user.client_secret is None:
+            await ctx.respond(
+                "Please provide both client_id and client_secret.", ephemeral=True
+            )
             return
     else:
         user = User(username, client_id, client_secret)
@@ -129,16 +81,14 @@ async def login(ctx: discord.ApplicationContext, client_id: str = None, client_s
     url = user.get_authorize_url()
 
     # Send instruction + button
-    view = CallbackButtonView(user, url)
+    view = CallbackView(user)
     await ctx.respond(
         f"1. To log in:\n1. [Click here to log in to Spotify]({url})\n"
         "2. After the page refreshes, **copy the full URL** from your browser.\n"
         "3. Click the button below and paste the into the form.",
         view=view,
-        ephemeral=True
+        ephemeral=True,
     )
-
-
 
 
 @bot.slash_command(
@@ -158,53 +108,16 @@ async def select_device(ctx: discord.ApplicationContext) -> None:
         await ctx.respond("no available devices found", ephemeral=True)
         return
 
-    # create device selection prompt
-    device_list = "please select a device from below (send the number in chat):\n"
-    for i, device in enumerate(available_devices):
-        device_list += f"{i + 1}. {device['name']} ({device['type']})\n"
-
-    await ctx.respond(device_list)
-
-    # await response from user
-    try:
-        reply_message = await bot.wait_for(
-            "message",
-            check=(lambda message: message.author.name == username),
-            timeout=10.0,
-        )
-    except Exception as e:
-        print(e, file=sys.stderr)
-        await ctx.respond("response took too long", ephemeral=True)
-        return
-
-    # retrieve response message contents
-    message = await ctx.fetch_message(reply_message.id)
-    content = message.content
-
-    # incorrect input handling
-    if not content.isnumeric():
-        print(f"response not numeric: {content}", sys.stderr)
-        await ctx.send("invalid response", reference=reply_message)
-        return
-
-    device_num = int(content) - 1
-    if not 0 <= device_num < len(available_devices):
-        print(f"response index out of range: {device_num}", sys.stderr)
-        await ctx.send("invalid response", reference=reply_message)
-        return
-
-    # perform device change
-    device = available_devices[device_num]["id"]
     user = users[username]
-    try:
-        user.update_user(username, curr_device=device)
-    except Exception as e:
-        print(e, file=sys.stderr)
-        await ctx.respond("device update failed", ephemeral=True)
-        return
-    await ctx.send(
-        f"device changed to {available_devices[device_num]['name']}",
-        reference=reply_message,
+
+    # create device selection buttons
+    device_view = discord.ui.View()
+    for i, device in enumerate(available_devices):
+        device_button = DeviceButton(num=i, device=device, user=user)
+        device_view.add_item(device_button)
+
+    await ctx.respond(
+        "please select a device from below:", view=device_view, ephemeral=True
     )
 
 
