@@ -92,7 +92,7 @@ class User:
         self.curr_device = curr_device or self.curr_device
 
         # update user info in database
-        update_db_user(self.username, client_id, client_secret, curr_device)
+        update_db_user(self.username, self.client_id, self.client_secret, self.curr_device)
 
     def __repr__(self):
         return f"User(client_id: {self.client_id}, client_secret: {self.client_secret})"

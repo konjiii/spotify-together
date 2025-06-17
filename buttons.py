@@ -17,9 +17,8 @@ class DeviceButton(Button):
 
     # perform device change
     async def callback(self, interaction: Interaction):
-        username = self.user.username
         try:
-            self.user.update_user(username, curr_device=self.device_id)
+            self.user.update_user(curr_device=self.device_id)
         except Exception as e:
             print(e, file=sys.stderr)
             await interaction.respond("device update failed", ephemeral=True)
