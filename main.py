@@ -5,6 +5,8 @@ import sys
 from contextlib import suppress
 
 import discord
+from discord import ui
+from discord.ui import View, Button, Modal, InputText
 from dotenv import load_dotenv
 
 from database import get_db_users, init_db, insert_db_user
@@ -48,87 +50,95 @@ async def shutdown(ctx):
     # afterwards close the bot
     await bot.close()
 
+# send modal (a from) to privately send your callbacklink
+class SecretModal(Modal):
+    # The modal itself
+    def __init__(self, user, url):
+        super().__init__(title="Paste Spotify Callback URL")
+        self.user = user
+        self.url = url
+        self.input = InputText(
+            label="Callback URL",
+            placeholder=f"Visit: the url, then paste the full redirected URL here.",
+            style=discord.InputTextStyle.long
+        )
+        self.add_item(self.input)
 
-@bot.slash_command(
-    name="login", description="login with your client_id and client_secret"
-)
-async def login(
-    ctx: discord.ApplicationContext,
-    client_id: str | None = None,
-    client_secret: str | None = None,
-) -> None:
-    """
-    return a login link the user can use to login
+    # what happens after the modal
+    async def callback(self, interaction: discord.Interaction):
+        callback_url = self.input.value
 
-    params:
-        client_id: str,
-        client_secret: str,
-    """
+        if not self.user:
+            await interaction.response.send_message("You have not run /login yet!", ephemeral=True)
+            return
+
+        try:
+            self.user.save_access_token(callback_url)
+        except Exception as e:
+            print(e, file=sys.stderr)
+            await interaction.response.send_message("❌ Login failed: invalid callback URL", ephemeral=True)
+            return
+
+        curr_device = self.user.get_current_device()
+        try:
+            self.user.update_user(self.user.client_id, self.user.client_secret, curr_device)
+        except Exception as e:
+            print(e, file=sys.stderr)
+            await interaction.response.send_message("❌ Failed to update user info.", ephemeral=True)
+            return
+
+        await interaction.response.send_message("✅ Login successful!", ephemeral=True)
+
+        if curr_device is None:
+            await interaction.followup.send(
+                "⚠️ No active device found. Run `/select_device` to pick one.",
+                ephemeral=True
+            )
+
+# send modal after buttonpress
+class CallbackButtonView(View):
+    def __init__(self, user, url):
+        super().__init__(timeout=300)
+        self.user = user
+        self.url = url
+
+    @discord.ui.button(label="Paste Callback URL", style=discord.ButtonStyle.primary)
+    async def open_modal(self, button: Button, interaction: discord.Interaction):
+        await interaction.response.send_modal(SecretModal(self.user, self.url))
+
+
+@bot.slash_command(name="login", description="Login with your client_id and client_secret")
+async def login(ctx: discord.ApplicationContext, client_id: str = None, client_secret: str = None):
     username = ctx.author.name
+
+    # Validate user setup
     if client_id is None or client_secret is None:
         user = users.get(username)
         if user is None:
-            await ctx.respond(
-                "client_id or client_secret unknown. Please provide client_id and client_secret to /login",
-                ephemeral=True,
-            )
+            await ctx.respond("Please provide both client_id and client_secret.", ephemeral=True)
             return
     else:
         user = User(username, client_id, client_secret)
         users[username] = user
 
-    # create new database entry if user is not in database yet
+    # DB init if needed
     if get_db_users(username) == []:
         insert_db_user(username)
 
-    # login in browser
+    # Get Spotify URL
     url = user.get_authorize_url()
+
+    # Send instruction + button
+    view = CallbackButtonView(user, url)
     await ctx.respond(
-        f"go to: {url}, then wait until the site refreshes and copy the link of the webpage. The new link is the callback url.\nThen run /callback",
-        ephemeral=True,
+        f"1. To log in:\n1. [Click here to log in to Spotify]({url})\n"
+        "2. After the page refreshes, **copy the full URL** from your browser.\n"
+        "3. Click the button below and paste the into the form.",
+        view=view,
+        ephemeral=True
     )
 
 
-@bot.slash_command(name="callback", description="finish authentication")
-async def callback(ctx: discord.ApplicationContext, callback_url: str) -> None:
-    """
-    get and save access token using the callback url the user gives
-
-    params:
-        callback_url: str
-    """
-    user = users.get(ctx.author.name)
-
-    if user is None:
-        await ctx.respond("you have not ran /login yet!", ephemeral=True)
-        return
-
-    try:
-        # save access token in cache
-        user.save_access_token(callback_url)
-    except Exception as e:
-        print(e, file=sys.stderr)
-        await ctx.respond("login failed: invalid callback link", ephemeral=True)
-        return
-
-    username = ctx.author.name
-
-    curr_device = user.get_current_device()
-
-    try:
-        user.update_user(user.client_id, user.client_secret, curr_device)
-    except Exception as e:
-        print(e, file=sys.stderr)
-        await ctx.respond("login failed", ephemeral=True)
-        return
-
-    await ctx.respond("login successful", ephemeral=True)
-
-    if curr_device is None:
-        await ctx.respond(
-            "did not find active device\nplease run /select_device to choose a device",
-            ephemeral=True,
-        )
 
 
 @bot.slash_command(
