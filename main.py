@@ -1,16 +1,15 @@
+# for shutdown
+import asyncio
 import os
 import sys
+from contextlib import suppress
 
 import discord
 from dotenv import load_dotenv
 
 from database import get_db_users, init_db, insert_db_user
-from user import User, get_users_dict
 from musicplayer import MusicPlayer
-
-# for shutdown
-import asyncio
-from contextlib import suppress
+from user import User, get_users_dict
 
 load_dotenv()
 bot = discord.Bot()
@@ -54,7 +53,9 @@ async def shutdown(ctx):
     name="login", description="login with your client_id and client_secret"
 )
 async def login(
-    ctx: discord.ApplicationContext, client_id: str, client_secret: str
+    ctx: discord.ApplicationContext,
+    client_id: str | None = None,
+    client_secret: str | None = None,
 ) -> None:
     """
     return a login link the user can use to login
@@ -64,8 +65,16 @@ async def login(
         client_secret: str,
     """
     username = ctx.author.name
-    user = User(username, client_id, client_secret)
-    users[username] = user
+    if client_id is None or client_secret is None:
+        user = users.get(username)
+        if user is None:
+            await ctx.respond(
+                "client_id or client_secret unknown. Please provide client_id and client_secret to /login"
+            )
+            return
+    else:
+        user = User(username, client_id, client_secret)
+        users[username] = user
 
     # create new database entry if user is not in database yet
     if get_db_users(username) == []:
@@ -73,7 +82,10 @@ async def login(
 
     # login in browser
     url = user.get_authorize_url()
-    await ctx.respond(f"go to: {url}, then wait until the site refreshes and copy the link of the webpage. The new link is the callback url.\nThen run /callback", ephemeral=True)
+    await ctx.respond(
+        f"go to: {url}, then wait until the site refreshes and copy the link of the webpage. The new link is the callback url.\nThen run /callback",
+        ephemeral=True,
+    )
 
 
 @bot.slash_command(name="callback", description="finish authentication")
@@ -103,7 +115,7 @@ async def callback(ctx: discord.ApplicationContext, callback_url: str) -> None:
     curr_device = user.get_current_device()
 
     try:
-        user.update_user(user.client_id, user.client_secret , curr_device)
+        user.update_user(user.client_id, user.client_secret, curr_device)
     except Exception as e:
         print(e, file=sys.stderr)
         await ctx.respond("login failed", ephemeral=True)
@@ -114,16 +126,18 @@ async def callback(ctx: discord.ApplicationContext, callback_url: str) -> None:
     if curr_device is None:
         await ctx.respond(
             "did not find active device\nplease run /select_device to choose a device",
-            ephemeral=True
+            ephemeral=True,
         )
 
 
-@bot.slash_command(name="select_device", description="select a device to use to control with the bot")
+@bot.slash_command(
+    name="select_device", description="select a device to use to control with the bot"
+)
 async def select_device(ctx: discord.ApplicationContext) -> None:
     """
     choose a device to control with the bot
     if device_id is given select that device to control, show available devices otherwise
-    
+
     params:
         device_id: Opt<str>
     """
@@ -132,22 +146,26 @@ async def select_device(ctx: discord.ApplicationContext) -> None:
     if len(available_devices) == 0:
         await ctx.respond("no available devices found", ephemeral=True)
         return
-    
+
     # create device selection prompt
     device_list = "please select a device from below (send the number in chat):\n"
     for i, device in enumerate(available_devices):
-        device_list += f"{i+1}. {device['name']} ({device['type']})\n"
+        device_list += f"{i + 1}. {device['name']} ({device['type']})\n"
 
     await ctx.respond(device_list)
 
     # await response from user
     try:
-        reply_message = await bot.wait_for('message', check=(lambda message: message.author.name == username), timeout=10.0)
+        reply_message = await bot.wait_for(
+            "message",
+            check=(lambda message: message.author.name == username),
+            timeout=10.0,
+        )
     except Exception as e:
         print(e, file=sys.stderr)
         await ctx.respond("response took too long", ephemeral=True)
         return
-    
+
     # retrieve response message contents
     message = await ctx.fetch_message(reply_message.id)
     content = message.content
@@ -163,7 +181,7 @@ async def select_device(ctx: discord.ApplicationContext) -> None:
         print(f"response index out of range: {device_num}", sys.stderr)
         await ctx.send("invalid response", reference=reply_message)
         return
-    
+
     # perform device change
     device = available_devices[device_num]["id"]
     user = users[username]
@@ -173,10 +191,16 @@ async def select_device(ctx: discord.ApplicationContext) -> None:
         print(e, file=sys.stderr)
         await ctx.respond("device update failed", ephemeral=True)
         return
-    await ctx.send(f"device changed to {available_devices[device_num]["name"]}", reference=reply_message)
+    await ctx.send(
+        f"device changed to {available_devices[device_num]['name']}",
+        reference=reply_message,
+    )
 
 
-@bot.slash_command(name="create_party", description="make a spotify listening party that users can join")
+@bot.slash_command(
+    name="create_party",
+    description="make a spotify listening party that users can join",
+)
 async def create_party(ctx: discord.ApplicationContext, name: str) -> None:
     """
     make a spotify listening party that users can join
@@ -199,33 +223,35 @@ async def join_party(ctx: discord.ApplicationContext, name: str) -> None:
         name: str
     """
     username = ctx.author.name
-    if username in user_to_party: # check if username is a key in the user_to_party_dict
-        await leave_party(ctx) # make the user leave the party
-    
+    if (
+        username in user_to_party
+    ):  # check if username is a key in the user_to_party_dict
+        await leave_party(ctx)  # make the user leave the party
+
     try:
-        parties[name].add_user(users[username]) # add user to music player party
-        parties[name].add_ctx(username,ctx)
-    except: # make party if it doesn't exist yet 
-        await create_party(ctx,name)
-        parties[name].add_user(users[username]) # add user to music player party
-        parties[name].add_ctx(username,ctx)
+        parties[name].add_user(users[username])  # add user to music player party
+        parties[name].add_ctx(username, ctx)
+    except:  # make party if it doesn't exist yet
+        await create_party(ctx, name)
+        parties[name].add_user(users[username])  # add user to music player party
+        parties[name].add_ctx(username, ctx)
 
     user_to_party[username] = name
     await ctx.respond(f"user {username} added to party {name}")
-    
+
 
 @bot.slash_command(name="leave_party", description="remove user from party")
 async def leave_party(ctx: discord.ApplicationContext) -> None:
     """
     remove user that calls this function from the party
-    
+
     """
     username = ctx.author.name
     if username in user_to_party:
         party_name = user_to_party[username]
         user_to_party.pop(username)
         try:
-            parties[party_name].remove_user(username) # add user to music player party
+            parties[party_name].remove_user(username)  # add user to music player party
             parties[party_name].remove_ctx(username)
             await ctx.respond(f"user {username} removed from party {party_name}")
         except Exception as e:
@@ -237,8 +263,8 @@ async def leave_party(ctx: discord.ApplicationContext) -> None:
             await ctx.respond(f"party {party_name} is empty so was removed")
     else:
         await ctx.respond(f"user {username} is not in any party")
-    
-    
+
+
 @bot.slash_command(name="current_party", description="show what party you are in")
 async def current_party(ctx: discord.ApplicationContext) -> None:
     """
@@ -251,9 +277,11 @@ async def current_party(ctx: discord.ApplicationContext) -> None:
         await ctx.respond(f"user {username} is in party {party_name}")
     else:
         await ctx.respond(f"user {username} is not in any party")
-    
 
-@bot.slash_command(name="choose_playlist", description="choose a playlist for your party")
+
+@bot.slash_command(
+    name="choose_playlist", description="choose a playlist for your party"
+)
 async def choose_playlist(ctx: discord.ApplicationContext, url: str) -> None:
     """
     remove user that calls this function from the party
@@ -264,15 +292,18 @@ async def choose_playlist(ctx: discord.ApplicationContext, url: str) -> None:
     if username in user_to_party:
         party_name = user_to_party[username]
         try:
-            parties[party_name].choose_playlist(url) # add user to music player party
+            parties[party_name].choose_playlist(url)  # add user to music player party
         except Exception as e:
             print(e, file=sys.stderr)
             await ctx.respond("No playlist found")
         await ctx.respond(f"user {username} changed the playlist of {party_name}")
-    else: # make party if it doesn't exist yet 
+    else:  # make party if it doesn't exist yet
         await ctx.respond(f"user {username} is not in any party")
-   
-async def q_and_a(ctx: discord.ApplicationContext ,question: str, timeout: float | None = None) -> str:
+
+
+async def q_and_a(
+    ctx: discord.ApplicationContext, question: str, timeout: float | None = None
+) -> str:
     """
     equivalent of input() function but for the discord bot
     params:
@@ -282,7 +313,11 @@ async def q_and_a(ctx: discord.ApplicationContext ,question: str, timeout: float
     await ctx.respond(question, ephemeral=True)
     # await response from user
     try:
-        reply_message = await bot.wait_for('message', check=(lambda message: message.author.name == username), timeout=timeout)
+        reply_message = await bot.wait_for(
+            "message",
+            check=(lambda message: message.author.name == username),
+            timeout=timeout,
+        )
     except Exception as e:
         print(e, file=sys.stderr)
         await ctx.respond("response took too long", ephemeral=True)
@@ -291,6 +326,7 @@ async def q_and_a(ctx: discord.ApplicationContext ,question: str, timeout: float
     message = await ctx.fetch_message(reply_message.id)
     query = message.content
     return query
+
 
 @bot.slash_command(name="current_queue", description="show what queue your party has")
 async def current_queue(ctx: discord.ApplicationContext) -> None:
@@ -303,18 +339,18 @@ async def current_queue(ctx: discord.ApplicationContext) -> None:
     if username in user_to_party:
         party_name = user_to_party[username]
         music_player = parties[party_name]
-        q = music_player.queue # get queue variable
+        q = music_player.queue  # get queue variable
         mes = "\n"
         for i in range(len(q)):
             track_info = user.sp.track(q[i])
             # Extract name and artist
             song_name = track_info["name"]
             artist_name = track_info["artists"][0]["name"]
-            mes+=f"{i+1}. {song_name} by {artist_name}\n"
+            mes += f"{i + 1}. {song_name} by {artist_name}\n"
         await ctx.respond(f"The queue of party {party_name}:{mes}")
     else:
         await ctx.respond(f"user {username} is not in any party")
-    
+
 
 @bot.slash_command(name="add_to_queue", description="add a song to your partys queue")
 async def add_to_queue(ctx: discord.ApplicationContext) -> None:
@@ -331,7 +367,7 @@ async def add_to_queue(ctx: discord.ApplicationContext) -> None:
         dont_cancel_adding = True
         while searching:
             query = await q_and_a(ctx, "What song would you like to add to the queue?")
-            if query == "s": #stop searching
+            if query == "s":  # stop searching
                 not_valid_answer = False
                 searching = False
                 dont_cancel_adding = False
@@ -341,26 +377,29 @@ async def add_to_queue(ctx: discord.ApplicationContext) -> None:
                 print(e, file=sys.stderr)
                 await ctx.respond("login again", ephemeral=True)
                 return
-            if results is None: # not track found
+            if results is None:  # not track found
                 await ctx.respond("track not found", ephemeral=True)
                 continue
             tracks = results["tracks"]["items"]
             # show found results
             track_des = "#############\nSongs found:\n"
-            for i,track in enumerate(tracks):
-                track_des+= f"{i}. {track['name']} from {track['album']['artists'][0]['name']}\n"
+            for i, track in enumerate(tracks):
+                track_des += f"{i}. {track['name']} from {track['album']['artists'][0]['name']}\n"
             await ctx.respond(track_des, ephemeral=True)
             # choose one of the results
             not_valid_answer = True
             while not_valid_answer:
-                query = await q_and_a(ctx, f"################\n\nAdd: {tracks[0]['name']} from {tracks[0]['album']['artists'][0]['name']}, to queue?\n-----------------\n 'y': yes\ntype a number: the search result number\n'n': search again\n's': stop searching\n-----------------")
+                query = await q_and_a(
+                    ctx,
+                    f"################\n\nAdd: {tracks[0]['name']} from {tracks[0]['album']['artists'][0]['name']}, to queue?\n-----------------\n 'y': yes\ntype a number: the search result number\n'n': search again\n's': stop searching\n-----------------",
+                )
                 if query == "y":
                     idx = 0
                     not_valid_answer = False
                     searching = False
                 else:
                     try:
-                        idx = int(query)-1
+                        idx = int(query) - 1
                         if 0 <= idx < len(tracks):
                             not_valid_answer = False
                             searching = False
@@ -371,15 +410,19 @@ async def add_to_queue(ctx: discord.ApplicationContext) -> None:
                             not_valid_answer = False
                             searching = False
                             dont_cancel_adding = False
-                        else: 
-                            await ctx.respond(f"{query} is not a valid answer", ephemeral=True)
+                        else:
+                            await ctx.respond(
+                                f"{query} is not a valid answer", ephemeral=True
+                            )
         if dont_cancel_adding:
             chosen_track = tracks[idx]["uri"]
             try:
                 parties[party_name].add_to_queue_bot(chosen_track)
             except Exception as e:
                 print(e, file=sys.stderr)
-            await ctx.respond(f"{tracks[idx]['name']} from {tracks[idx]['album']['artists'][0]['name']} added to the queue.")
+            await ctx.respond(
+                f"{tracks[idx]['name']} from {tracks[idx]['album']['artists'][0]['name']} added to the queue."
+            )
     else:
         await ctx.respond(f"user {username} is not in any party")
 
@@ -428,5 +471,5 @@ async def back(ctx: discord.ApplicationContext) -> None:
     else:
         await ctx.respond(f"user {username} is not in any party")
 
-bot.run(os.getenv("DISCORD_TOKEN"))
 
+bot.run(os.getenv("DISCORD_TOKEN"))
