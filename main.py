@@ -53,7 +53,7 @@ async def shutdown(ctx):
 
 # this is for /login
 # send modal (a from) to privately send your callbacklink
-class CallbackModal(Modal):
+class LoginModal(Modal):
     # The modal itself
     def __init__(self, user, ctx):
         super().__init__(title="Paste Spotify Callback URL")
@@ -106,7 +106,7 @@ class CallbackModal(Modal):
             await select_device(self.ctx)
 
 # send modal after buttonpress
-class CallbackView(View):
+class LoginView(View):
     def __init__(self, user, ctx):
         super().__init__(timeout=300)
         self.user = user
@@ -114,7 +114,7 @@ class CallbackView(View):
 
     @discord.ui.button(label="Paste Callback URL", style=discord.ButtonStyle.primary)
     async def open_modal(self, button: Button, interaction: discord.Interaction):
-        await interaction.response.send_modal(CallbackModal(self.user,self.ctx))
+        await interaction.response.send_modal(LoginModal(self.user,self.ctx))
 
 
 @bot.slash_command(
@@ -147,7 +147,7 @@ async def login(
     url = user.get_authorize_url()
 
     # Send instruction + button
-    view = CallbackView(user,ctx)
+    view = LoginView(user,ctx)
     await ctx.respond(
         f"1. To log in:\n1. [Click here to log in to Spotify]({url})\n"
         "2. After the page refreshes, **copy the full URL** from your browser.\n"
@@ -187,6 +187,51 @@ async def select_device(ctx: discord.ApplicationContext) -> None:
     )
 
 
+# this is the general popup code (=form or modal)
+# PLAN: 
+# 1. alle titels en messages die bij de popup horen moeten als parameters zodat je popup() kan gebruiken als vervanging van alle code van de modal
+# 2. verder met de function_after_popup
+# 3. kijken of function_after_popup een standaard naam kan hebben ipv het steeds anders noemen van een een vervolg functie
+class GeneralModal(Modal):
+    def __init__(self, user, ctx, on_submit):
+        super().__init__(title="Paste Spotify Callback URL")
+        self.user = user
+        self.ctx = ctx
+        self.on_submit = on_submit  # callback function
+        self.input = InputText(
+            label="Callback URL",
+            placeholder="Visit the url, then paste the full redirected URL here.",
+            style=discord.InputTextStyle.long,
+        )
+        self.add_item(self.input)
+
+    async def callback(self, interaction: discord.Interaction):
+        user_input = (self.input.value or "").strip()
+        await self.on_submit(interaction, user_input)
+
+class GeneralView(View):
+    def __init__(self, user, ctx, on_submit):
+        super().__init__(timeout=300)
+        self.user = user
+        self.ctx = ctx
+        self.on_submit = on_submit
+
+    @discord.ui.button(label="Paste Callback URL", style=discord.ButtonStyle.primary)
+    async def open_modal(self, button: Button, interaction: discord.Interaction):
+        await interaction.response.send_modal(GeneralModal(self.user, self.ctx, self.on_submit))
+
+async def popup(ctx,function_after_popup):
+    
+    user = users.get(ctx.author.name)
+    view = GeneralView(user, ctx, function_after_popup)
+    await ctx.respond(
+        "Your message",
+        view=view,
+        ephemeral=True,
+    )
+
+
+
 @bot.slash_command(
     name="create_party",
     description="make a spotify listening party that users can join",
@@ -198,13 +243,23 @@ async def create_party(ctx: discord.ApplicationContext, name: str) -> None:
     params:
         name: str
     """
+    
+    partynames = parties.keys()
+    if name in partynames: # check for unique party name
+        await ctx.respond(f"Party of name: {name} already exists. Choose a different party name.")
+        await popup(ctx=ctx,function_after_popup=handle_submit)
+        # happens after submission of popup
+        async def handle_submit(interaction, user_input):
+            await interaction.response.send_message(f"You entered: {user_input}", ephemeral=True)
+            # You can continue your logic here
+        return
+    # create party
     party = MusicPlayer()
     parties[name] = party
-
     await ctx.respond(f"created party: {name}")
 
 
-@bot.slash_command(name="join_party", description="add user to party")
+@bot.slash_command(name="join_party", description="join party (automatically create the party if you are the first one in the party!)")
 async def join_party(ctx: discord.ApplicationContext, name: str) -> None:
     """
     add user that calls this function to a party with name 'name'
