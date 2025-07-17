@@ -187,10 +187,6 @@ async def select_device(ctx: discord.ApplicationContext) -> None:
     )
 
 
-# this is the general popup code (=form or modal)
-# PLAN: 
-# 1. popup messages doorgeven
-# 2. doorgaan na return van popup
 class GeneralModal(Modal):
     def __init__(self, user, ctx, on_submit, popup_text1="Popup 1 is title", popup_text2 = "Popup 2 is question", popup_text3 = "Popup 3 is description"):
         super().__init__(title=popup_text1)
@@ -233,10 +229,10 @@ class GeneralView(View):
                 GeneralModal(self.view_ref.user, self.view_ref.ctx, self.view_ref.on_submit, self.view_ref.popup_text1, self.view_ref.popup_text2, self.view_ref.popup_text3)
             )
 
-async def popup(ctx,button_text):
+async def popup(ctx, message_before_button = "Message before button", button_text="Button text", popup_text1="Popup 1 is title", popup_text2 = "Popup 2 is question", popup_text3 = "Popup 3 is description"):
     """
     Input: ctx and messeges of the button and modal.
-    Output: Modal 
+    Output: user input of the form
     """
     user = users.get(ctx.author.name) # get user
     # create event loop and link result at the end
@@ -245,21 +241,16 @@ async def popup(ctx,button_text):
     # functon after popup
     async def function_after_popup(interaction, user_input):
         await interaction.response.send_message("Message received.", ephemeral=True)
-        future.set_result((interaction, user_input)) # close event loop and save result in var: future
+        future.set_result((interaction, user_input)) # close event loop and save the results:(interaction, user_input) in var: future
 
-    view = GeneralView(user, ctx, function_after_popup, button_text=button_text)
+    view = GeneralView(user, ctx, function_after_popup, button_text=button_text, popup_text1=popup_text1, popup_text2=popup_text2, popup_text3=popup_text3)
     await ctx.respond(
-        "Message before button",
+        message_before_button,
         view=view,
         ephemeral=True,
     )
-
     # Wait for user input from modal
     interaction, user_input = await future
-    print(f"Got user input: {user_input}")
-
-    # Continue processing after receiving input
-    await ctx.respond(f"Processed: {user_input}")
     return user_input
 
 
@@ -274,17 +265,19 @@ async def create_party(ctx: discord.ApplicationContext, name: str) -> None:
     params:
         name: str
     """
-    
-    partynames = parties.keys()
-    if name in partynames: # check for unique party name
-        await ctx.respond(f"Party of name: {name} already exists. Choose a different party name.")
-        response = await popup(ctx=ctx) 
-        
-        return
+    while True: # give unique party name, loop coninues if party name is already taken
+        partynames = parties.keys()
+        if name in partynames: # check for unique party name
+            await ctx.respond(f"Party of name: {name}, already exists. Choose a different party name.")
+            response = await popup(ctx=ctx, message_before_button="kijk1", button_text="kijk2", popup_text1="kijk3", popup_text2="kijk4", popup_text3="kijk5") 
+            name = response
+        else:
+            break
     # create party
     party = MusicPlayer()
     parties[name] = party
     await ctx.respond(f"created party: {name}")
+    return name
 
 
 @bot.slash_command(name="join_party", description="join party (automatically create the party if you are the first one in the party!)")
@@ -305,7 +298,7 @@ async def join_party(ctx: discord.ApplicationContext, name: str) -> None:
         parties[name].add_user(users[username])  # add user to music player party
         parties[name].add_ctx(username, ctx)
     except:  # make party if it doesn't exist yet
-        await create_party(ctx, name)
+        name = await create_party(ctx, name)
         parties[name].add_user(users[username])  # add user to music player party
         parties[name].add_ctx(username, ctx)
 
@@ -351,6 +344,33 @@ async def current_party(ctx: discord.ApplicationContext) -> None:
     else:
         await ctx.respond(f"user {username} is not in any party")
 
+@bot.slash_command(name="show_parties", description="show all parties")
+async def show_parties(ctx: discord.ApplicationContext) -> None:
+    """
+    let the bot say all parties
+
+    """
+    username = ctx.author.name
+    user_party = user_to_party.get(username, None)
+    partynames = parties.keys()
+    party_table = ""
+    
+    if not partynames:
+        await ctx.respond("YOU ARE NOT IN A PARTY 🦍")
+        return
+
+    for name in partynames: # all rows of the table
+        extra_space_amount = max(0, 17 - len(name))
+        indicator = "<- THIS IS YOUR PARTY" if user_party == name else ""
+        party_table += f"{name}{' ' * extra_space_amount}| {indicator}\n"
+        
+
+    if user_party:
+        await ctx.respond("`All the parties: | Your party:          \n" + party_table+"`")
+    else:
+        await ctx.respond("`All the parties: | YOU ARE NOT IN A PARTY 🦍\n" + party_table+"`")
+
+    
 
 @bot.slash_command(
     name="choose_playlist", description="choose a playlist for your party"
