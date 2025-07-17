@@ -189,18 +189,17 @@ async def select_device(ctx: discord.ApplicationContext) -> None:
 
 # this is the general popup code (=form or modal)
 # PLAN: 
-# 1. alle titels en messages die bij de popup horen moeten als parameters zodat je popup() kan gebruiken als vervanging van alle code van de modal
-# 2. verder met de function_after_popup
-# 3. kijken of function_after_popup een standaard naam kan hebben ipv het steeds anders noemen van een een vervolg functie
+# 1. popup messages doorgeven
+# 2. doorgaan na return van popup
 class GeneralModal(Modal):
-    def __init__(self, user, ctx, on_submit):
-        super().__init__(title="Paste Spotify Callback URL")
+    def __init__(self, user, ctx, on_submit, popup_text1="Popup 1 is title", popup_text2 = "Popup 2 is question", popup_text3 = "Popup 3 is description"):
+        super().__init__(title=popup_text1)
         self.user = user
         self.ctx = ctx
         self.on_submit = on_submit  # callback function
         self.input = InputText(
-            label="Callback URL",
-            placeholder="Visit the url, then paste the full redirected URL here.",
+            label=popup_text2,
+            placeholder=popup_text3,
             style=discord.InputTextStyle.long,
         )
         self.add_item(self.input)
@@ -209,27 +208,59 @@ class GeneralModal(Modal):
         user_input = (self.input.value or "").strip()
         await self.on_submit(interaction, user_input)
 
+
 class GeneralView(View):
-    def __init__(self, user, ctx, on_submit):
+    def __init__(self, user, ctx, on_submit, button_text="Button text", popup_text1="Popup 1 is title", popup_text2 = "Popup 2 is question", popup_text3 = "Popup 3 is description"):
         super().__init__(timeout=300)
         self.user = user
         self.ctx = ctx
         self.on_submit = on_submit
+        self.button_text = button_text
+        self.popup_text1 = popup_text1
+        self.popup_text2 = popup_text2
+        self.popup_text3 = popup_text3
 
-    @discord.ui.button(label="Paste Callback URL", style=discord.ButtonStyle.primary)
-    async def open_modal(self, button: Button, interaction: discord.Interaction):
-        await interaction.response.send_modal(GeneralModal(self.user, self.ctx, self.on_submit))
+        # add button with label as parameter
+        self.add_item(self.GeneralButton(label=self.button_text, view=self))
 
-async def popup(ctx,function_after_popup):
-    
-    user = users.get(ctx.author.name)
-    view = GeneralView(user, ctx, function_after_popup)
+    class GeneralButton(Button):
+        def __init__(self, label, view): # the button
+            super().__init__(label=label, style=discord.ButtonStyle.primary)
+            self.view_ref = view
+
+        async def callback(self, interaction: discord.Interaction): # after button press
+            await interaction.response.send_modal(
+                GeneralModal(self.view_ref.user, self.view_ref.ctx, self.view_ref.on_submit, self.view_ref.popup_text1, self.view_ref.popup_text2, self.view_ref.popup_text3)
+            )
+
+async def popup(ctx,button_text):
+    """
+    Input: ctx and messeges of the button and modal.
+    Output: Modal 
+    """
+    user = users.get(ctx.author.name) # get user
+    # create event loop and link result at the end
+    loop = asyncio.get_running_loop()
+    future = loop.create_future()
+    # functon after popup
+    async def function_after_popup(interaction, user_input):
+        await interaction.response.send_message("Message received.", ephemeral=True)
+        future.set_result((interaction, user_input)) # close event loop and save result in var: future
+
+    view = GeneralView(user, ctx, function_after_popup, button_text=button_text)
     await ctx.respond(
-        "Your message",
+        "Message before button",
         view=view,
         ephemeral=True,
     )
 
+    # Wait for user input from modal
+    interaction, user_input = await future
+    print(f"Got user input: {user_input}")
+
+    # Continue processing after receiving input
+    await ctx.respond(f"Processed: {user_input}")
+    return user_input
 
 
 @bot.slash_command(
@@ -247,11 +278,8 @@ async def create_party(ctx: discord.ApplicationContext, name: str) -> None:
     partynames = parties.keys()
     if name in partynames: # check for unique party name
         await ctx.respond(f"Party of name: {name} already exists. Choose a different party name.")
-        await popup(ctx=ctx,function_after_popup=handle_submit)
-        # happens after submission of popup
-        async def handle_submit(interaction, user_input):
-            await interaction.response.send_message(f"You entered: {user_input}", ephemeral=True)
-            # You can continue your logic here
+        response = await popup(ctx=ctx) 
+        
         return
     # create party
     party = MusicPlayer()
