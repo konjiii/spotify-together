@@ -269,7 +269,7 @@ async def create_party(ctx: discord.ApplicationContext, name: str) -> None:
         partynames = parties.keys()
         if name in partynames: # check for unique party name
             await ctx.respond(f"Party of name: {name}, already exists. Choose a different party name.")
-            response = await popup(ctx=ctx, message_before_button="kijk1", button_text="kijk2", popup_text1="kijk3", popup_text2="kijk4", popup_text3="kijk5") 
+            response = await popup(ctx=ctx, message_before_button="", button_text="Click here to give different party name", popup_text1="", popup_text2="How do you name your party?", popup_text3="Type here...") 
             name = response
         else:
             break
